@@ -167,6 +167,9 @@ variable (m n : ℕ)
 #check (Nat.lcm_zero_right n : Nat.lcm n 0 = 0)
 #check (Nat.lcm_zero_left n : Nat.lcm 0 n = 0)
 
+
+-- note: the book wrote that dvd_antisymm is ambiguous,
+-- but that warning is not relevant for new Lean versions
 #check dvd_antisymm
 #check dvd_gcd
 #check Nat.dvd_gcd
