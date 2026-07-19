@@ -167,6 +167,15 @@ variable (m n : ℕ)
 #check (Nat.lcm_zero_right n : Nat.lcm n 0 = 0)
 #check (Nat.lcm_zero_left n : Nat.lcm 0 n = 0)
 
+#check dvd_antisymm
+#check dvd_gcd
+#check Nat.dvd_gcd
 example : Nat.gcd m n = Nat.gcd n m := by
-  sorry
+  let h : ∀ a b : ℕ, Nat.gcd a b ∣ Nat.gcd b a := by
+    intro a b
+    apply dvd_gcd
+    · apply gcd_dvd_right
+    apply gcd_dvd_left
+  apply dvd_antisymm
+  repeat apply h
 end
