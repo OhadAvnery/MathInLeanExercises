@@ -17,6 +17,10 @@ variable (R : Type*) [Ring R]
 
 end
 
+-- ohad: \forall = ∀, \exists = ∃,
+-- other latex stuff work as well
+
+
 section
 variable (R : Type*) [CommRing R]
 variable (a b c d : R)
@@ -52,35 +56,73 @@ theorem neg_add_cancel_left (a b : R) : -a + (a + b) = b := by
   rw [← add_assoc, neg_add_cancel, zero_add]
 
 -- Prove these:
+-- ohad
 theorem add_neg_cancel_right (a b : R) : a + b + -b = a := by
-  sorry
+  calc
+    a + b + -b = a + (b + -b) := by rw [add_assoc]
+    _ = a + 0 := by rw [MyRing.add_neg_cancel] -- tho we're in the namespace already
+    _ = a := by rw [add_zero]
 
+-- ohad
+-- update: not efficient, should have used neg_add_cancel_left
 theorem add_left_cancel {a b c : R} (h : a + b = a + c) : b = c := by
-  sorry
+  calc
+    b = (-a + a) + b := by rw [neg_add_cancel, zero_add]
+    _ = -a + (a+c) := by rw [add_assoc, h]
+    _ = c := by rw [← add_assoc, neg_add_cancel, zero_add]
 
+-- ohad
 theorem add_right_cancel {a b c : R} (h : a + b = c + b) : a = c := by
-  sorry
+  -- not good - infinite loop!
+  -- repeat rw [add_comm] at h
+  repeat rw [← add_comm b] at h
+
+  --exact add_left_cancel h -- apply add_left_cancel, as a functino, on h
+  --apply add_left_cancel h
+
+  -- rw [h, add_left_cancel] -- incorrect
+
+  rw [add_left_cancel h]
+  -- second option: apply (add_left_cancel h), which is a=c,
+  -- to the target a=c, turning it to c=c which is obvious.
+
 
 theorem mul_zero (a : R) : a * 0 = 0 := by
   have h : a * 0 + a * 0 = a * 0 + 0 := by
     rw [← mul_add, add_zero, add_zero]
-  rw [add_left_cancel h]
+  rw [add_left_cancel h] -- ohad: implicit arguments
 
+-- ohad: trying implicit args for mul_zero
+theorem mul_zero_implicit {a : R} : a * 0 = 0 := by
+  have h : a * 0 + a * 0 = a * 0 + 0 := by
+    rw [← mul_add, add_zero, add_zero]
+  rw [add_left_cancel h] -- ohad: implicit arguments
+
+-- ohad
 theorem zero_mul (a : R) : 0 * a = 0 := by
-  sorry
+  have h : 0 * a + 0 * a = 0 * a + 0 := by
+    rw [<- add_mul 0 0 a, add_zero, add_zero]
+  apply add_left_cancel h
 
+-- ohad
 theorem neg_eq_of_add_eq_zero {a b : R} (h : a + b = 0) : -a = b := by
-  sorry
+  have h' : a + -a = a + b := by
+    rw [add_neg_cancel, h]
+  apply add_left_cancel h'
 
 theorem eq_neg_of_add_eq_zero {a b : R} (h : a + b = 0) : a = -b := by
-  sorry
+  -- ohad: try to reduce to previous one
+  rw [add_comm] at h
+  rw [neg_eq_of_add_eq_zero h]
 
 theorem neg_zero : (-0 : R) = 0 := by
   apply neg_eq_of_add_eq_zero
   rw [add_zero]
 
+-- ohad
 theorem neg_neg (a : R) : - -a = a := by
-  sorry
+  have h : -a + a = 0 := by exact neg_add_cancel a
+  exact neg_eq_of_add_eq_zero h
 
 end MyRing
 
@@ -99,17 +141,19 @@ example (a b : ℝ) : a - b = a + -b :=
 example (a b : ℝ) : a - b = a + -b := by
   rfl
 
+-- OHAD: CONTINUE FROM HERE
+
 namespace MyRing
 variable {R : Type*} [Ring R]
 
 theorem self_sub (a : R) : a - a = 0 := by
-  sorry
+  rw [sub_eq_add_neg, add_neg_cancel]
 
 theorem one_add_one_eq_two : 1 + 1 = (2 : R) := by
   norm_num
 
 theorem two_mul (a : R) : 2 * a = a + a := by
-  sorry
+  rw [← one_add_one_eq_two, add_mul, one_mul]
 
 end MyRing
 
@@ -131,16 +175,38 @@ variable {G : Type*} [Group G]
 
 namespace MyGroup
 
-theorem mul_inv_cancel (a : G) : a * a⁻¹ = 1 := by
-  sorry
+-- ohad - lemma
+-- a^{-1} written as: a \inv
+theorem mul_left_cancel {a b c : G} (h : a * b = a * c) : b = c := by
+  calc
+    b = (a⁻¹ * a) * b := by rw [inv_mul_cancel, one_mul]
+    _ = (a⁻¹ * a) * c := by rw [mul_assoc, h, ← mul_assoc]
+    _ = c := by rw [inv_mul_cancel, one_mul]
 
+-- ohad: using it for mul_inv_cancel so put it before
 theorem mul_one (a : G) : a * 1 = a := by
-  sorry
+  have h : a⁻¹ * (a*1) = a⁻¹ * a := by calc
+    a⁻¹ * (a*1) = 1*1 := by rw [← mul_assoc, inv_mul_cancel]
+    _ = a⁻¹ * a := by rw [one_mul, ← inv_mul_cancel]
+  apply mul_left_cancel h
+
+theorem mul_inv_cancel (a : G) : a * a⁻¹ = 1 := by
+  have h : a⁻¹ * (a * a⁻¹) = a⁻¹ * 1 := by
+    rw [← mul_assoc, inv_mul_cancel, one_mul, mul_one]
+  apply mul_left_cancel h
+
+-- ohad - lemma
+theorem blabla {a b : G} (h : a*b=1) : a⁻¹=b := by
+  calc
+    a⁻¹ = a⁻¹*(a*b) := by rw [h, mul_one]
+    _ = b := by rw [← mul_assoc, inv_mul_cancel, one_mul]
 
 theorem mul_inv_rev (a b : G) : (a * b)⁻¹ = b⁻¹ * a⁻¹ := by
-  sorry
+  have h : (a*b) * (b⁻¹ * a⁻¹) = 1 := by calc
+    (a*b) * (b⁻¹ * a⁻¹) = a*(b*b⁻¹)*a⁻¹ := by rw [mul_assoc a b, ← mul_assoc b, ← mul_assoc a]
+    _ = 1 := by rw [mul_inv_cancel, mul_one, mul_inv_cancel]
+  apply blabla h
 
 end MyGroup
 
 end
-

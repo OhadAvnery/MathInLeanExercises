@@ -12,6 +12,7 @@ def f (x : ℕ) :=
 
 -- These are propositions, of type `Prop`.
 #check 2 + 2 = 4
+-- #check 2 + 2 = 5
 
 def FermatLastTheorem :=
   ∀ x y z n : ℕ, n > 2 ∧ x * y * z ≠ 0 → x ^ n + y ^ n ≠ z ^ n
@@ -20,7 +21,11 @@ def FermatLastTheorem :=
 
 -- These are proofs of propositions.
 theorem easy : 2 + 2 = 4 :=
+-- theorem easy : 2 + 2 = 5 :=
   rfl
+
+theorem easy_but_false : 2 + 2 = 5 :=
+  sorry
 
 #check easy
 
@@ -53,3 +58,11 @@ example : ∀ m n : Nat, Even n → Even (m * n) := by
 example : ∀ m n : Nat, Even n → Even (m * n) := by
   intros; simp [*, parity_simps]
 
+
+-- ohad: more examples of proofs
+example (a b c : ℤ) : a * (b + c) = a*b + a*c := by
+  ring
+
+-- doesn't work!
+--example (a b c : ℤ) : a * (b + c) = a*b + a*b := by
+--  ring

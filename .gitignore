@@ -4,3 +4,6 @@
 .lake
 /.cache
 .DS_Store
+
+# Personal backup copy; active work belongs in MIL/.
+/MIL_backup_do_not_touch/

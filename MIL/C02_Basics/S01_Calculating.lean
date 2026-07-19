@@ -5,12 +5,18 @@ example (a b c : ℝ) : a * b * c = b * (a * c) := by
   rw [mul_comm a b]
   rw [mul_assoc b a c]
 
--- Try these.
+-- ohad
 example (a b c : ℝ) : c * b * a = b * (a * c) := by
-  sorry
+  rw [mul_assoc c b a]
+  rw [<- mul_assoc b a c]
+  rw [mul_comm (b*a) c]
 
+-- ohad
+-- ℝ = \ R, ← = \ l
 example (a b c : ℝ) : a * (b * c) = b * (a * c) := by
-  sorry
+  rw [← mul_assoc a b c]
+  rw [mul_comm a b]
+  rw [mul_assoc]
 
 -- An example.
 example (a b c : ℝ) : a * b * c = b * c * a := by
@@ -19,11 +25,14 @@ example (a b c : ℝ) : a * b * c = b * c * a := by
 
 /- Try doing the first of these without providing any arguments at all,
    and the second with only one argument. -/
+-- ohad
 example (a b c : ℝ) : a * (b * c) = b * (c * a) := by
-  sorry
+  rw [mul_comm] -- ohad: finds a*(b*c) before b*c!
+  rw [mul_assoc]
 
+-- ohad
 example (a b c : ℝ) : a * (b * c) = b * (a * c) := by
-  sorry
+  rw [← mul_assoc, mul_comm a, mul_assoc]
 
 -- Using facts from the local context.
 example (a b c d e f : ℝ) (h : a * b = c * d) (h' : e = f) : a * (b * e) = c * (d * f) := by
@@ -32,11 +41,16 @@ example (a b c d e f : ℝ) (h : a * b = c * d) (h' : e = f) : a * (b * e) = c *
   rw [h]
   rw [mul_assoc]
 
+-- ohad
 example (a b c d e f : ℝ) (h : b * c = e * f) : a * b * c * d = a * e * f * d := by
-  sorry
+  rw [mul_assoc a b c, mul_assoc a e f]
+  rw [h]
 
+-- ohad
+-- sub_self: a-a=0
 example (a b c d : ℝ) (hyp : c = b * a - d) (hyp' : d = a * b) : c = 0 := by
-  sorry
+  rw [hyp, hyp', mul_comm, sub_self]
+  -- if we want to be explicit, sub_self should have a*b as parameter
 
 example (a b c d e f : ℝ) (h : a * b = c * d) (h' : e = f) : a * (b * e) = c * (d * f) := by
   rw [h', ← mul_assoc, h, mul_assoc]
@@ -62,6 +76,9 @@ variable (a b c : ℝ)
 #check mul_comm a
 #check mul_comm
 
+-- ohad
+-- #check (a: ℚ) -- error
+--#check (a: ℂ) -- denotes ↑a, my guess: true by upcasting
 end
 
 section
@@ -72,6 +89,10 @@ example : (a + b) * (a + b) = a * a + 2 * (a * b) + b * b := by
   rw [← add_assoc, add_assoc (a * a)]
   rw [mul_comm b a, ← two_mul]
 
+-- ohad
+example : (a + b) * (a + b) = a * a + 2 * (a * b) + b * b := by
+  ring
+
 example : (a + b) * (a + b) = a * a + 2 * (a * b) + b * b :=
   calc
     (a + b) * (a + b) = a * a + b * a + (a * b + b * b) := by
@@ -80,6 +101,7 @@ example : (a + b) * (a + b) = a * a + 2 * (a * b) + b * b :=
       rw [← add_assoc, add_assoc (a * a)]
     _ = a * a + 2 * (a * b) + b * b := by
       rw [mul_comm b a, ← two_mul]
+
 
 example : (a + b) * (a + b) = a * a + 2 * (a * b) + b * b :=
   calc
@@ -96,11 +118,46 @@ end
 section
 variable (a b c d : ℝ)
 
+-- ohad: rw proof
 example : (a + b) * (c + d) = a * c + a * d + b * c + b * d := by
-  sorry
+  rw [mul_add, add_mul, add_mul]
+  -- A+B+(C+D) =? A+C+B+D
+  rw [add_assoc (a*c), ← add_assoc (b*c), add_comm (b*c) (a*d),
+  <-add_assoc, <-add_assoc]
+
+-- ohad: calc proof
+example : (a + b) * (c + d) = a * c + a * d + b * c + b * d := by
+  calc
+    (a + b) * (c + d) = (a+b)*c + (a+b)*d := by
+      rw [mul_add]
+    _ = (a*c+b*c)+(a*d+b*d) := by
+      repeat rw [add_mul]
+    _ = a*c + (b*c+a*d) +b*d := by
+      rw [← add_assoc, add_assoc (a*c)]
+    _ = a * c + (a * d + b * c) + b * d :=  by
+      rw [add_comm (b*c)]
+    _ = a * c + a * d + b * c + b * d :=  by
+      rw [← add_assoc]
+
 
 example (a b : ℝ) : (a + b) * (a - b) = a ^ 2 - b ^ 2 := by
-  sorry
+  calc
+    (a+b)*(a-b) = (a+b)*a - (a+b)*b := by
+      rw [mul_sub]
+    _ = a*a + b*a - (a*b + b*b) := by
+      repeat rw [add_mul]
+    _ = (a^2 + b*a) - (a*b + b^2) := by
+      repeat rw [← pow_two]
+    _ = a^2 + b*a - a*b - b^2 := by
+      rw [sub_sub]
+    _ = a^2 + (b*a-a*b) - b^2 := by
+      rw [add_sub]
+    _ =a^2 + (a*b-a*b) - b^2 := by
+      rw [mul_comm]
+    _ = a^2+(a*b+(-(a*b))) - b^2 := by
+      rfl
+    _ = a^2 - b^2 := by
+      rw [add_comm (a*b), neg_add_cancel, add_zero]
 
 #check pow_two a
 #check mul_sub a b c
@@ -110,6 +167,8 @@ example (a b : ℝ) : (a + b) * (a - b) = a ^ 2 - b ^ 2 := by
 #check add_zero a
 
 end
+
+-- OHAD: READ UNTIL HERE
 
 -- Examples.
 
