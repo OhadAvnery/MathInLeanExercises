@@ -159,8 +159,34 @@ example (divab : a ∣ b) (divbc : b ∣ c) : a ∣ c := by
   rw [ceq, beq]
   use d * e; ring
 
+-- v2
+example : a ∣ b → b ∣ c →  a ∣ c := by
+  --intro div_a_b, div_b+c
+  rintro ⟨d, h_ab⟩ ⟨e, h_bc⟩
+  use d*e
+  rw [h_bc, h_ab]
+  ring -- or just associativity
+  --exact ⟨d*e, by ring⟩ -- doesn't work
+  -- as ring only does exact equalities
+
+-- v3: one-liner to prove the equality
+-- Grobner is always computable, might have double-exponential runtime
+-- but in practice is often efficient
+example : a ∣ b → b ∣ c →  a ∣ c :=
+  fun ⟨d,_⟩ ⟨e,_⟩ ↦ ⟨d*e, by grobner⟩
+
+-- if I want it to be a one-liner, can use match or divac.elim
+-- but it seems messier.
 example (divab : a ∣ b) (divac : a ∣ c) : a ∣ b + c := by
-  sorry
+  obtain ⟨x, _⟩ := divab
+  obtain ⟨y, _⟩ := divac
+  exact ⟨x+y, by grobner⟩
+
+-- book solution: just use rfl in obtaining stuff
+example (divab : a ∣ b) (divac : a ∣ c) : a ∣ b + c := by
+  obtain ⟨x, rfl⟩ := divab
+  obtain ⟨y, rfl⟩ := divac
+  exact ⟨x+y, by ring⟩
 
 end
 
@@ -168,20 +194,35 @@ section
 
 open Function
 
+#print Function.Surjective
+-- ∀ (b : β), ∃ a, f a = b
 example {c : ℝ} : Surjective fun x ↦ x + c := by
   intro y
   use y - c
   dsimp; ring
 
+#print mul_div_cancel₀
 example {c : ℝ} (h : c ≠ 0) : Surjective fun x ↦ c * x := by
-  sorry
+  intro y
+  use y / c
+  dsimp
+  exact mul_div_cancel₀ _ h
 
 example (x y : ℝ) (h : x - y ≠ 0) : (x ^ 2 - y ^ 2) / (x - y) = x + y := by
-  field_simp [h]
+  field_simp
+  -- the example was given with h explicitly, but turns out it can just deduce it itself?
+  --field_simp [h]
   ring
 
+-- trying the previous problem with this new tactic
+example {c : ℝ} (h : c ≠ 0) : Surjective fun x ↦ c * x := by
+  intro y
+  use y / c
+  field_simp
+
 example {f : ℝ → ℝ} (h : Surjective f) : ∃ x, f x ^ 2 = 4 := by
-  rcases h 2 with ⟨x, hx⟩
+  --rcases h 2 with ⟨x, hx⟩
+  obtain ⟨x, hx⟩ := h 2
   use x
   rw [hx]
   norm_num
@@ -194,6 +235,9 @@ variable {α : Type*} {β : Type*} {γ : Type*}
 variable {g : β → γ} {f : α → β}
 
 example (surjg : Surjective g) (surjf : Surjective f) : Surjective fun x ↦ g (f x) := by
-  sorry
+  intro z
+  obtain ⟨y, rfl⟩ := surjg z
+  obtain ⟨x, rfl⟩ := surjf y
+  use x
 
 end
