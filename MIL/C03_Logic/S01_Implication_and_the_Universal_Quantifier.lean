@@ -189,20 +189,21 @@ example (ef : FnEven f) (og : FnOdd g) : FnEven fun x ↦ f (g x) := by
 
 end
 
--- TODO: ohad: continue from here
-
 section
 
 variable {α : Type*} (r s t : Set α)
 
 example : s ⊆ s := by
-  intro x xs
+  intro x xs -- we introduce x:α and the assumption xs: x∈s
   exact xs
 
 theorem Subset.refl : s ⊆ s := fun _x xs ↦ xs
 
 theorem Subset.trans : r ⊆ s → s ⊆ t → r ⊆ t := by
-  sorry
+  intro rs st _x xr
+  exact st (rs xr)
+
+example : r ⊆ s → s ⊆ t → r ⊆ t := fun rs st _x xr ↦ st (rs xr)
 
 end
 
@@ -213,8 +214,19 @@ variable (s : Set α) (a b : α)
 def SetUb (s : Set α) (a : α) :=
   ∀ x, x ∈ s → x ≤ a
 
-example (h : SetUb s a) (h' : a ≤ b) : SetUb s b :=
-  sorry
+-- ohad: this is the explicit version, where we write out
+-- the types both of the statement (Prop) and of x (α).
+-- Not necessary because the compiler infered them.
+-- writing x∈s implies x must have type α, otherwise it won't compile
+-- (if x has a different type it's not just that it won't have a proof,
+-- it's simply undefined)
+example (s : Set α) (a : α) : Prop :=
+  ∀ x : α , x ∈ s → x ≤ a
+
+-- same proof as the book :)
+example (h : SetUb s a) (h' : a ≤ b) : SetUb s b := by
+  intro x xs
+  apply le_trans (h x xs) h'
 
 end
 
@@ -222,17 +234,29 @@ section
 
 open Function
 
+-- ohad: we could have done "dsimp at h' " to replace h' with a simpler expression.
+-- But it's not necessary as exact knows how to expand up to
+-- definitional equality, and rw doesn't (it checks for syntatic occurrences)
 example (c : ℝ) : Injective fun x ↦ x + c := by
   intro x₁ x₂ h'
   exact (add_left_inj c).mp h'
 
+#check mul_right_inj
+#check mul_right_inj'
 example {c : ℝ} (h : c ≠ 0) : Injective fun x ↦ c * x := by
-  sorry
+  intro x y fx_eq_fy
+  --dsimp at fx_eq_fy -- not needed
+  --#check (mul_right_inj' h)
+  -- the above has type  c * ?m.24 = c * ?m.25 ↔ ?m.24 = ?m.25
+  exact (mul_right_inj' h).mp fx_eq_fy
 
 variable {α : Type*} {β : Type*} {γ : Type*}
 variable {g : β → γ} {f : α → β}
 
+-- book sol is the same, but diff var names and the last is apply and not exact
 example (injg : Injective g) (injf : Injective f) : Injective fun x ↦ g (f x) := by
-  sorry
-
+  intro x y func_x_eq_func_y
+  apply injf
+  apply injg
+  exact func_x_eq_func_y
 end

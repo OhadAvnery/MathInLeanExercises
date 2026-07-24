@@ -9,6 +9,7 @@ example : ∃ x : ℝ, 2 < x ∧ x < 3 := by
   use 5 / 2
   norm_num
 
+-- ohad: works even without the ",h1, h2" at the end
 example : ∃ x : ℝ, 2 < x ∧ x < 3 := by
   have h1 : 2 < (5 : ℝ) / 2 := by norm_num
   have h2 : (5 : ℝ) / 2 < 3 := by norm_num
@@ -22,6 +23,7 @@ example : ∃ x : ℝ, 2 < x ∧ x < 3 :=
   have h : 2 < (5 : ℝ) / 2 ∧ (5 : ℝ) / 2 < 3 := by norm_num
   ⟨5 / 2, h⟩
 
+-- ⟨ = \<, ⟩ = \>
 example : ∃ x : ℝ, 2 < x ∧ x < 3 :=
   ⟨5 / 2, by norm_num⟩
 
@@ -52,13 +54,39 @@ example (ubf : FnHasUb f) (ubg : FnHasUb g) : FnHasUb fun x ↦ f x + g x := by
   apply fnUb_add ubfa ubgb
 
 example (lbf : FnHasLb f) (lbg : FnHasLb g) : FnHasLb fun x ↦ f x + g x := by
-  sorry
+  -- todo: find t with FnLb (f+g) t
+  -- unpack the assumptions
+  rcases lbf with ⟨a, lbf_a⟩
+  rcases lbg with ⟨b, lbg_b⟩
+  -- these are unnecessary but make the goal+assumptions easier to read
+  -- dsimp [FnLb] at lbf_a
+  -- dsimp [FnLb] at lbg_b
+  -- dsimp [FnHasLb, FnLb]
+  use a + b
+  intro x
+  linarith [lbf_a x, lbg_b x]
+
+#search "for real a,b,c, if c>0 and a≤b then c*a≤c*b."
 
 example {c : ℝ} (ubf : FnHasUb f) (h : c ≥ 0) : FnHasUb fun x ↦ c * f x := by
-  sorry
+  rcases ubf with ⟨a,f_ub_a⟩ -- have: f≤a
+  use c*a -- need to show: c*f≤c*a
+  intro x -- goal is now (after dsimp): c*f(x)≤c*a
+  -- theorem name: the left factor is nonneg
+  apply mul_le_mul_of_nonneg_left (f_ub_a x) h
+  -- no need for actual dsimp because apply is smart enough
 
 example : FnHasUb f → FnHasUb g → FnHasUb fun x ↦ f x + g x := by
   rintro ⟨a, ubfa⟩ ⟨b, ubgb⟩
+  exact ⟨a + b, fnUb_add ubfa ubgb⟩
+
+-- ohad: explicit expansion. The above is nicer,
+-- does two instructions (introduce the assumption + unpack)
+-- at once, with no need for a tepmorary variable ubf for the "exists"
+-- assumption
+example : FnHasUb f → FnHasUb g → FnHasUb fun x ↦ f x + g x := by
+  intro ubf; rcases ubf with ⟨a, ubfa⟩
+  intro ubg; rcases ubg with ⟨b, ubgb⟩
   exact ⟨a + b, fnUb_add ubfa ubgb⟩
 
 example : FnHasUb f → FnHasUb g → FnHasUb fun x ↦ f x + g x :=
@@ -112,12 +140,15 @@ theorem sumOfSquares_mul {x y : α} (sosx : SumOfSquares x) (sosy : SumOfSquares
 
 theorem sumOfSquares_mul' {x y : α} (sosx : SumOfSquares x) (sosy : SumOfSquares y) :
     SumOfSquares (x * y) := by
+  -- rfl: automatically rewrite x in the goal as a²+b²
   rcases sosx with ⟨a, b, rfl⟩
   rcases sosy with ⟨c, d, rfl⟩
   use a * c - b * d, a * d + b * c
   ring
 
 end
+
+-- todo: continue from here
 
 section
 variable {a b c : ℕ}
