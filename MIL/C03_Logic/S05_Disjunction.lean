@@ -15,19 +15,31 @@ example (h : -y > x ^ 2 + 1) : y > 0 ∨ y < -1 := by
   right
   linarith [pow_two_nonneg x]
 
+-- this shows how Or is a union type -
+-- to construct it, we either construct an element of type Or.inl
+-- or of type Or.inr
 example (h : y > 0) : y > 0 ∨ y < -1 :=
   Or.inl h
 
 example (h : y < -1) : y > 0 ∨ y < -1 :=
   Or.inr h
 
+-- ohad: explicit embedding function
+example : (y > 0) → (y > 0 ∨ y < -1) := Or.inl
+
 example : x < |y| → x < y ∨ x < -y := by
+  -- define a term of type (0≤y ∨ 0>y), then split to cases
+  -- based on it using "with _ | _"
+  -- | = or, ⟨.,.⟩ = and
   rcases le_or_gt 0 y with h | h
   · rw [abs_of_nonneg h]
     intro h; left; exact h
+    --one-liner: exact Or.inl
   · rw [abs_of_neg h]
     intro h; right; exact h
 
+-- advantage of this notation:
+-- can prove the cases in whatever order we like
 example : x < |y| → x < y ∨ x < -y := by
   cases le_or_gt 0 y
   case inl h =>
@@ -58,24 +70,63 @@ example : x < |y| → x < y ∨ x < -y := by
 namespace MyAbs
 
 theorem le_abs_self (x : ℝ) : x ≤ |x| := by
-  sorry
+  rcases le_or_gt 0 x with h | h
+  · rw [abs_of_nonneg h]
+  · rw [abs_of_neg h]
+    linarith
+
 
 theorem neg_le_abs (x : ℝ) : -x ≤ |x| := by
-  sorry
+  rcases le_or_gt 0 x with h | h
+  · rw [abs_of_nonneg h]; linarith
+  · rw [abs_of_neg h] -- already solves by rfl
 
 theorem abs_add_le (x y : ℝ) : |x + y| ≤ |x| + |y| := by
-  sorry
+  rcases le_or_gt 0 (x+y) with h | h
+  · rw [abs_of_nonneg h]
+    linarith [le_abs_self x, le_abs_self y]
+  · rw [abs_of_neg h]
+    linarith [neg_le_abs x, neg_le_abs y]
 
+-- book proof is the same, but doing
+-- "rcases h' with h'|h' ". That is, overshadowing the var name
 theorem lt_abs : x < |y| ↔ x < y ∨ x < -y := by
-  sorry
+  rcases le_or_gt 0 y with h | h
+  · rw [abs_of_nonneg h]
+    constructor
+    · exact Or.inl
+    · intro h1
+      rcases h1 with h2 | h2
+      linarith; linarith
+  · rw [abs_of_neg h]
+    constructor
+    · exact Or.inr
+    · intro h1
+      rcases h1 with h2 | h2
+      linarith; linarith
 
 theorem abs_lt : |x| < y ↔ -y < x ∧ x < y := by
-  sorry
+  rcases le_or_gt 0 x with h | h
+  · rw [abs_of_nonneg h]
+    constructor
+    · intro h'
+      constructor <;> linarith
+    · intro h'
+      exact h'.right
+  · rw [abs_of_neg h]
+    constructor
+    · intro h'
+      constructor <;> linarith
+    · intro h'
+      linarith
+
+
 
 end MyAbs
 
 end
 
+-- this proof holds for all linear orders
 example {x : ℝ} (h : x ≠ 0) : x < 0 ∨ x > 0 := by
   rcases lt_trichotomy x 0 with xlt | xeq | xgt
   · left
@@ -91,28 +142,59 @@ example {m n k : ℕ} (h : m ∣ n ∨ m ∣ k) : m ∣ n * k := by
     apply dvd_mul_right
 
 example {z : ℝ} (h : ∃ x y, z = x ^ 2 + y ^ 2 ∨ z = x ^ 2 + y ^ 2 + 1) : z ≥ 0 := by
-  sorry
+  rcases h with ⟨x, y, h'|h'⟩
+  repeat linarith [sq_nonneg x, sq_nonneg y]
 
+-- book proof
+-- uses both ⟨ and <! wowza
+example {z : ℝ} (h : ∃ x y, z = x ^ 2 + y ^ 2 ∨ z = x ^ 2 + y ^ 2 + 1) : z ≥ 0 := by
+  rcases h with ⟨x, y, rfl|rfl⟩ <;> linarith [sq_nonneg x, sq_nonneg y]
+
+-- seems simpler than the book proof, actually! yay
+-- need to steps to pass from x^2=1 to (x+1)(x-1)=0:
+-- first ring which only expands equalities, then linarith which uses the assumption
 example {x : ℝ} (h : x ^ 2 = 1) : x = 1 ∨ x = -1 := by
-  sorry
+  have h1 : (x+1)*(x-1)=0 := by calc
+    (x+1)*(x-1) = x^2 - 1 := by ring
+    _ = 0 := by linarith [h]
+  rcases eq_zero_or_eq_zero_of_mul_eq_zero h1 with h2|h2
+  · right; linarith
+  · left; linarith
 
+-- simpler proof, grobner does ring+linarith together
 example {x y : ℝ} (h : x ^ 2 = y ^ 2) : x = y ∨ x = -y := by
-  sorry
+  have h1 : (x+y)*(x-y)=0 := by grobner
+  rcases eq_zero_or_eq_zero_of_mul_eq_zero h1 with h2|h2
+  · right; linarith
+  · left; linarith
 
 section
 variable {R : Type*} [CommRing R] [IsDomain R]
 variable (x y : R)
 
 example (h : x ^ 2 = 1) : x = 1 ∨ x = -1 := by
-  sorry
+  have h1 : (x+1)*(x-1)=0 := by calc
+    (x+1)*(x-1) = x^2 - 1 := by noncomm_ring
+    _ = 0 := by noncomm_ring [h]
+  -- we can't do "by abel" in the last line,
+  -- as abel only works for general equalities.
+  -- noncomm_ring does simplification and then able anyway
+  rcases eq_zero_or_eq_zero_of_mul_eq_zero h1 with h2|h2
+  · right; grobner
+  · left; grobner
 
 example (h : x ^ 2 = y ^ 2) : x = y ∨ x = -y := by
-  sorry
+  have h1 : (x+y)*(x-y)=0 := by grobner
+  rcases eq_zero_or_eq_zero_of_mul_eq_zero h1 with h2|h2
+  · right; grobner
+  · left; grobner
 
 end
 
 example (P : Prop) : ¬¬P → P := by
   intro h
+  -- or: cases em P with h1|h1
+  -- em P - assumes excluded middle!
   cases em P
   · assumption
   · contradiction
@@ -124,5 +206,12 @@ example (P : Prop) : ¬¬P → P := by
   contradiction
 
 example (P Q : Prop) : P → Q ↔ ¬P ∨ Q := by
-  sorry
-
+  constructor
+  · intro h
+    by_cases h': P
+    · right; exact h h'
+    · left; assumption
+  · intro h h'
+    rcases h with hnP | hQ
+    · contradiction
+    · assumption

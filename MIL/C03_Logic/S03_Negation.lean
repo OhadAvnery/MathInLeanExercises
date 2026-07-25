@@ -135,30 +135,43 @@ section
 variable {α : Type*} (P : α → Prop) (Q : Prop)
 
 example (h : ¬∃ x, P x) : ∀ x, ¬P x := by
-  sorry
+  intro x Px
+  exact h (by use x)
 
 example (h : ∀ x, ¬P x) : ¬∃ x, P x := by
-  sorry
+  intro h'
+  --rcases h' with ⟨x, Px⟩
+  obtain ⟨x, Px⟩ := h'
+  exact h x Px
 
 example (h : ¬∀ x, P x) : ∃ x, ¬P x := by
   sorry
 
-example (h : ∃ x, ¬P x) : ¬∀ x, P x := by
-  sorry
+-- doesn't depend on axioms
+theorem exists_not_P_example (h : ∃ x, ¬P x) : ¬∀ x, P x := by
+  intro h'
+  rcases h with ⟨x, Px⟩
+  exact Px (h' x)
+#print axioms exists_not_P_example
 
-example (h : ¬∀ x, P x) : ∃ x, ¬P x := by
+-- depends on [propext, Classical.choice, Quot.sound]
+theorem not_forall_example (h : ¬∀ x, P x) : ∃ x, ¬P x := by
   by_contra h'
   apply h
   intro x
   show P x
   by_contra h''
   exact h' ⟨x, h''⟩
+#print axioms not_forall_example
 
 example (h : ¬¬Q) : Q := by
-  sorry
+  by_contra h'
+  exact h h'
 
+-- no axioms needed
 example (h : Q) : ¬¬Q := by
-  sorry
+  intro nq
+  exact nq h
 
 end
 
@@ -166,10 +179,18 @@ section
 variable (f : ℝ → ℝ)
 
 example (h : ¬FnHasUb f) : ∀ a, ∃ x, f x > a := by
-  sorry
+  intro a
+  by_contra h'
+  apply h
+  use a
+  intro x
+  apply le_of_not_gt
+  intro a_f_x
+  exact h' (by use x)
 
 example (h : ¬∀ a, ∃ x, f x > a) : FnHasUb f := by
-  push_neg at h
+  --push_neg at h
+  push Not at h
   exact h
 
 example (h : ¬FnHasUb f) : ∀ a, ∃ x, f x > a := by
@@ -178,7 +199,9 @@ example (h : ¬FnHasUb f) : ∀ a, ∃ x, f x > a := by
   exact h
 
 example (h : ¬Monotone f) : ∃ x y, x ≤ y ∧ f y < f x := by
-  sorry
+  dsimp only [Monotone] at h
+  push Not at h
+  exact h
 
 example (h : ¬FnHasUb f) : ∀ a, ∃ x, f x > a := by
   contrapose! h
@@ -194,13 +217,16 @@ end
 section
 variable (a : ℕ)
 
+-- exfalso: reduce the goal to proving False
 example (h : 0 < 0) : a > 37 := by
   exfalso
   apply lt_irrefl 0 h
 
+-- absurd P ¬P deduces everything
 example (h : 0 < 0) : a > 37 :=
   absurd h (lt_irrefl 0)
 
+-- contradiction tries to find a cont in its hypotheses
 example (h : 0 < 0) : a > 37 := by
   have h' : ¬0 < 0 := lt_irrefl 0
   contradiction

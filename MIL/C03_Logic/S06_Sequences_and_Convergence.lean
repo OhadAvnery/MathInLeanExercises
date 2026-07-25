@@ -3,6 +3,15 @@ import Mathlib.Data.Real.Basic
 
 namespace C03S06
 
+section
+
+end
+
+
+
+
+
+
 def ConvergesTo (s : ℕ → ℝ) (a : ℝ) :=
   ∀ ε > 0, ∃ N, ∀ n ≥ N, |s n - a| < ε
 
@@ -76,22 +85,11 @@ theorem convergesTo_mul {s t : ℕ → ℝ} {a b : ℝ}
   · ext; ring
   ring
 
+-- deleted the skeleton
 theorem convergesTo_unique {s : ℕ → ℝ} {a b : ℝ}
       (sa : ConvergesTo s a) (sb : ConvergesTo s b) :
     a = b := by
-  by_contra abne
-  have : |a - b| > 0 := by sorry
-  let ε := |a - b| / 2
-  have εpos : ε > 0 := by
-    change |a - b| / 2 > 0
-    linarith
-  rcases sa ε εpos with ⟨Na, hNa⟩
-  rcases sb ε εpos with ⟨Nb, hNb⟩
-  let N := max Na Nb
-  have absa : |s N - a| < ε := by sorry
-  have absb : |s N - b| < ε := by sorry
-  have : |a - b| < |a - b| := by sorry
-  exact lt_irrefl _ this
+    sorry
 
 section
 variable {α : Type*} [LinearOrder α]
@@ -100,4 +98,3 @@ def ConvergesTo' (s : α → ℝ) (a : ℝ) :=
   ∀ ε > 0, ∃ N, ∀ n ≥ N, |s n - a| < ε
 
 end
-
