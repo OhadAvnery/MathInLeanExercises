@@ -32,7 +32,7 @@ example : s ∩ (t ∪ u) ⊆ s ∩ t ∪ s ∩ u := by
   have xtu : x ∈ t ∪ u := hx.2
   rcases xtu with xt | xu
   · left
-    show x ∈ s ∩ t
+    show x ∈ s ∩ t -- unnecessary line, but it makes it more clear I guess
     exact ⟨xs, xt⟩
   · right
     show x ∈ s ∩ u
@@ -44,7 +44,13 @@ example : s ∩ (t ∪ u) ⊆ s ∩ t ∪ s ∩ u := by
   · right; exact ⟨xs, xu⟩
 
 example : s ∩ t ∪ s ∩ u ⊆ s ∩ (t ∪ u) := by
-  sorry
+  rintro x (⟨xs, xt⟩ | ⟨xs, xu⟩)
+  · exact ⟨xs, by left; exact xt⟩
+  · exact ⟨xs, by right; exact xu⟩
+
+-- note: the above | syntax only works for rintro+rcases, and doesn't work in non-tactic world
+
+
 example : (s \ t) \ u ⊆ s \ (t ∪ u) := by
   intro x xstu
   have xs : x ∈ s := xstu.1.1
@@ -63,11 +69,19 @@ example : (s \ t) \ u ⊆ s \ (t ∪ u) := by
   use xs
   rintro (xt | xu) <;> contradiction
 
+-- found out a new tactic - tauto: opposite of contradiction
 example : s \ (t ∪ u) ⊆ (s \ t) \ u := by
-  sorry
+  rintro x ⟨xs, xntu⟩
+  constructor
+  · constructor
+    · exact xs
+    · contrapose xntu; left; tauto
+  · contrapose xntu; right; tauto
+
+
 example : s ∩ t = t ∩ s := by
-  ext x
-  simp only [mem_inter_iff]
+  ext x -- simplification of doing constructor + intro x twice, I think?
+  simp only [mem_inter_iff] -- not required
   constructor
   · rintro ⟨xs, xt⟩; exact ⟨xt, xs⟩
   · rintro ⟨xt, xs⟩; exact ⟨xs, xt⟩
@@ -83,9 +97,16 @@ example : s ∩ t = t ∩ s := by
   · rintro x ⟨xt, xs⟩; exact ⟨xs, xt⟩
 
 example : s ∩ t = t ∩ s :=
-    Subset.antisymm sorry sorry
+    Subset.antisymm (fun _x ⟨xs, xt⟩ ↦ ⟨xt, xs⟩) (fun _x ⟨xt, xs⟩ ↦ ⟨xs, xt⟩)
+
 example : s ∩ (s ∪ t) = s := by
-  sorry
+  ext x
+  constructor
+  · rintro ⟨xs, _⟩; exact xs
+  · rintro xs
+    constructor
+    · exact xs
+    · left; exact xs
 
 example : s ∪ s ∩ t = s := by
   sorry
@@ -93,8 +114,28 @@ example : s ∪ s ∩ t = s := by
 example : s \ t ∪ t = s ∪ t := by
   sorry
 
+--note: contrapose is classical - P->Q implies ¬Q->¬P
+--Explanation: ¬P = P→False, so this is just Hom(_, False), which is a contravariant functor!
 example : s \ t ∪ t \ s = (s ∪ t) \ (s ∩ t) := by
-  sorry
+  ext x
+  constructor
+  · rintro (⟨xs, xnt⟩ | ⟨xt, xns⟩)
+    · constructor
+      · left; exact xs
+      · contrapose! xnt; exact xnt.2
+    · constructor
+      · right; exact xt
+      · contrapose! xns; exact xns.1 -- need contrapose! and not just contrapose, to do Neg pushing
+  · rintro ⟨xs | xt, xnst⟩
+    · left
+      constructor
+      · exact xs
+      · contrapose! xnst; exact ⟨xs, xnst⟩
+    · right
+      constructor
+      · exact xt
+      · contrapose! xnst; exact ⟨xnst, xt⟩
+
 
 def evens : Set ℕ :=
   { n | Even n }
@@ -105,17 +146,32 @@ def odds : Set ℕ :=
 example : evens ∪ odds = univ := by
   rw [evens, odds]
   ext n
+  -- telling simp to NOT turn "not even" to odd.
+  -- otherwise it'll use a built-in predicate Odd which we don't want
   simp [-Nat.not_even_iff_odd]
+  -- n∈A ↔ n∈univ is just simplified to "A n"
   apply Classical.em
 
+-- since ∅={x|P x} with P x=False, ∅ is exactly the function: fun _ ↦ False
+-- and "x∈∅" is ∅ x, or False.
 example (x : ℕ) (h : x ∈ (∅ : Set ℕ)) : False :=
   h
 
+-- univ = {x | P x}, P x = True → univ is fun _ ↦ True,
+-- so x∈univ is equivalent to True.
+-- "trivial" is the canonical term of type "True", I guess!
 example (x : ℕ) : x ∈ (univ : Set ℕ) :=
   trivial
 
+#check Nat.Prime.eq_two_or_odd
+#check Nat.odd_iff
 example : { n | Nat.Prime n } ∩ { n | n > 2 } ⊆ { n | ¬Even n } := by
-  sorry
+  intro n
+  simp
+  intro np ngt2
+  rcases (Nat.Prime.eq_two_or_odd np) with neq2 | nodd
+  · linarith -- in fact, shows a contradiction
+  · exact Nat.odd_iff.2 nodd
 
 #print Prime
 
@@ -128,8 +184,13 @@ example (n : ℕ) (h : Prime n) : Nat.Prime n := by
   rw [Nat.prime_iff]
   exact h
 
+-- rwa [...] is a shortcut for "rw [...]; assumption"
 example (n : ℕ) (h : Prime n) : Nat.Prime n := by
   rwa [Nat.prime_iff]
+
+-- test - like I suspected, the other case needs a reverse use of prime_iff
+example (n : ℕ) (h : Nat.Prime n) : Prime n := by
+  rwa [← Nat.prime_iff]
 
 end
 
@@ -150,11 +211,27 @@ example (h : ∃ x ∈ s, ¬Even x ∧ Prime x) : ∃ x ∈ s, Prime x := by
 section
 variable (ssubt : s ⊆ t)
 
+-- we define an external variable s⊆t.
+-- this means that all examples below in the section
+-- have an additional param, ssubt.
 example (h₀ : ∀ x ∈ t, ¬Even x) (h₁ : ∀ x ∈ t, Prime x) : ∀ x ∈ s, ¬Even x ∧ Prime x := by
-  sorry
+  intro x xs
+  --include ssubt
+  have xt : x∈t := ssubt xs
+  --constructor <;> assumption [h0 x xt, h1 x xt]
+  constructor
+  · exact h₀ x xt
+  · exact h₁ x xt
 
 example (h : ∃ x ∈ s, ¬Even x ∧ Prime x) : ∃ x ∈ t, Prime x := by
-  sorry
+  rcases h with ⟨x, xs, ⟨xe, xp⟩⟩
+  -- doesn't work
+  -- use x, ⟨ssubt xs, xp⟩
+  use x
+  exact ⟨ssubt xs, xp⟩
+  -- other option:
+  -- exact ⟨x, ssubt xs, xp⟩
+
 
 end
 
@@ -236,3 +313,16 @@ example : ⋂₀ s = ⋂ t ∈ s, t := by
 
 end
 
+-- test
+section
+variable (s : ℕ)
+variable (h : False)
+
+example : False := h
+
+include h
+theorem lol : False := by
+  apply h
+
+#print axioms lol
+end

@@ -3,7 +3,6 @@ import Mathlib.Data.Real.Basic
 
 -- trying to reconstruct stuff about limits before reading the chapter
 
-
 -- working with functions s:ℕ→ℝ
 def eventuallyIn (s : ℕ → ℝ) (L : ℝ) (ε : ℝ) :=
   ∃N : ℕ, ∀n : ℕ, n>N → |s n - L| < ε
@@ -115,3 +114,17 @@ theorem uniqueLimits {f : ℕ → ℝ} {L1 L2 : ℝ} (hL1 : converges f L1) (hL2
 -- didn't work, it suggested to use "let" to remember the value, then use dsimp [ε] to simplify it.
 -- 2. I realized n-1 in natural numbers is truncated subraction, so "n>n-1" doesn't always hold!
 -- instead I could have used "omega" for natural number arithmetic
+
+-- starting again, this time with n≥N like in the book
+def eventuallyIn' (s : ℕ → ℝ) (L : ℝ) (ε : ℝ) :=
+  ∃N : ℕ, ∀n : ℕ, n≥N → |s n - L| < ε
+
+def converges' (s : ℕ → ℝ) (L : ℝ) :=
+  ∀ε : ℝ, ε > 0 → eventuallyIn s L ε
+
+-- division
+-- |f(n)/g(n)-a/b|=|f(n)b-g(n)a|/|bg(n)|
+-- denom >= b^2/2 for large enough n
+-- numerator --> 0 by add + mul limits
+theorem div_limits {f g:ℕ→ℝ} {a b : ℝ} (bne0 : b≠0) (flima: converges' f a) (glimb: converges' g b) : converges' (fun n ↦ (f n) / (g n)) (a / b) := by
+  sorry
