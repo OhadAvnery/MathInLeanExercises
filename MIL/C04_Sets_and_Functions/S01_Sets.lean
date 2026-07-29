@@ -244,6 +244,7 @@ variable (s : Set α)
 
 open Set
 
+-- also works: ⋃ (i : I), A i
 example : (s ∩ ⋃ i, A i) = ⋃ i, A i ∩ s := by
   ext x
   simp only [mem_inter_iff, mem_iUnion]
@@ -270,8 +271,23 @@ example : (⋂ i, A i ∩ B i) = (⋂ i, A i) ∩ ⋂ i, B i := by
 
 
 example : (s ∪ ⋂ i, A i) = ⋂ i, A i ∪ s := by
-  sorry
+  ext x -- same as intro x
+  simp only [mem_union, mem_iInter]
+  constructor
+  · rintro h i
+    rcases h with h1 | h2
+    · right; assumption
+    · left; exact h2 i
+  · intro h
+    by_cases xs : x ∈ s -- assumes excluded middle!
+    · left; assumption
+    · right
+      intro i
+      rcases h i -- no need for case names
+      · assumption
+      · contradiction
 
+-- TODO: continue from here
 def primes : Set ℕ :=
   { x | Nat.Prime x }
 
@@ -290,8 +306,16 @@ example : (⋂ p ∈ primes, { x | ¬p ∣ x }) ⊆ { x | x = 1 } := by
   simp
   apply Nat.exists_prime_and_dvd
 
+#check eq_univ_of_forall
+#check Nat.exists_infinite_primes
 example : (⋃ p ∈ primes, { x | x ≤ p }) = univ := by
-  sorry
+  ext x
+  simp
+  rcases Nat.exists_infinite_primes x with ⟨p,hp⟩
+  use p, ⟨hp.right, hp.left⟩
+  --use p
+  --exact ⟨hp.right, hp.left⟩
+
 
 end
 
